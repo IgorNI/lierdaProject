@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <color name="common_color_gray_text">#979797</color>
+    <color name="status_color">#f9f9f9</color>
+    <color name="common_color_dark_gray">#4f4f4f</color>
+    <color name="common_color_gray_bg">#f0eff5</color>
+    
+    <color name="light_color1">#e70114</color>
+    <color name="light_color2">#601a83</color>
+    <color name="light_color3">#7fcdf4</color>
+    <color name="light_color4">#f39900</color>
+    <color name="light_color5">#31b26b</color>
+    <color name="light_color6">#b2d665</color>
+</resources>

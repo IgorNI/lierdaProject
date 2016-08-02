@@ -1,0 +1,161 @@
+package com.android.hiparker.lierda_light;
+
+import java.util.Random;
+
+import com.android.hiparker.lierda_light.constant.AppCst;
+import com.android.hiparker.lierda_light.dao.DaoMaster;
+import com.android.hiparker.lierda_light.dao.DaoSession;
+import com.android.hiparker.lierda_light.dao.LightDao;
+import com.android.hiparker.lierda_light.dao.LightTemp;
+import com.android.hiparker.lierda_light.pojo.Light;
+import com.android.hiparker.lierda_light.pojo.LightManager;
+import com.android.hiparker.lierda_light.pojo.ScanRecord;
+import com.android.hiparker.lierda_light.utils.ScreenUtil;
+
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothAdapter.LeScanCallback;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.TypedArray;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.ParcelUuid;
+import android.util.Log;
+import android.widget.Toast;
+
+public class LaunchActivity extends Activity {
+	public static final int REQUEST_ENABLE_BT = 2;
+	public static final int SCAN_PERIOD = 5000;
+
+	private Handler mHandler;
+	private BluetoothManager bManager;
+	private BluetoothAdapter bAdapter;
+	private boolean mScanning = false;
+	private LightDao mLightDao;
+	private TypedArray colors;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_launch);
+		ScreenUtil.GetInfo(this);
+
+		mHandler = new Handler();
+
+		if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+		    Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+		    finish();
+		    return;
+		} else {
+			bManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+	        bAdapter = bManager.getAdapter();
+		}
+		// 检查设备上是否支持蓝牙
+        if (bAdapter == null) {
+            Toast.makeText(this, R.string.error_bluetooth_not_supported,Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        if (!bAdapter.isEnabled()) {
+        	Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        	startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        } else {
+        	startScanLight(true);
+        }
+        DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "lights.db", null);
+		SQLiteDatabase db = helper.getWritableDatabase();
+		DaoMaster daoMaster = new DaoMaster(db);
+		DaoSession daoSession = daoMaster.newSession();
+		mLightDao = daoSession.getLightDao();
+		
+		colors = getResources().obtainTypedArray(R.array.light_color_list);
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
+			startScanLight(true);
+		}
+	}
+
+	public void startScanLight(final boolean enable) {
+		if (enable) {
+			mHandler.postDelayed(new Runnable(){
+				@Override
+				public void run() {
+					mScanning = false;
+					bAdapter.stopLeScan(mLeScanCallback);
+					finish();
+					Intent intent = new Intent(LaunchActivity.this, HomeActivity.class);
+					startActivity(intent);
+				}
+			}, SCAN_PERIOD);
+			mScanning = true;
+			bAdapter.startLeScan(mLeScanCallback);
+		} else {
+			mScanning = false;
+			bAdapter.stopLeScan(mLeScanCallback);
+		}
+	}
+	
+	private LeScanCallback mLeScanCallback = new LeScanCallback(){
+
+		@Override
+		public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
+			int type = device.getType();
+			Log.d("", "----scan type:" + type + "         name:"+device.getName());
+			ScanRecord record = ScanRecord.parseFromBytes(scanRecord);
+			
+			boolean isLight = false;
+			if (record.getServiceUuids() != null) {
+				for (ParcelUuid uuid : record.getServiceUuids()) {
+					Log.d("BLE", "---uuid:" + uuid.toString());
+					if (AppCst.LIGHT_UUID.equals(uuid.toString())) {
+						isLight = true;
+					}
+				}
+			}
+			if (!isLight) {
+				return;
+			}
+			final Light light = LightManager.getInstance().makLightByDevice(device);
+			
+			if (light == null) {
+				return;
+			}
+
+			runOnUiThread(new Runnable() {
+				public void run() {
+					LightTemp temp = mLightDao.load(light.device.getAddress());
+					if (temp == null) {
+						temp = new LightTemp(light.device.getAddress());
+						temp.setName(light.device.getName());
+						int random = new Random().nextInt(6);
+						temp.setColor(colors.getColor(random, Color.GRAY));
+						mLightDao.insert(temp);
+					}
+					light.mColor = temp.getColor();
+				}
+			});
+			
+			light.connect(LaunchActivity.this, mHandler);
+			
+		}
+		
+	};
+	
+	protected void onDestroy() {
+		if (mScanning) {
+			bAdapter.stopLeScan(mLeScanCallback);
+		}
+		super.onDestroy();
+	};
+}

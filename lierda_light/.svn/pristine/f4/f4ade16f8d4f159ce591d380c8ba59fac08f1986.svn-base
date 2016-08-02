@@ -1,0 +1,647 @@
+package com.android.hiparker.lierda_light;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import com.android.hiparker.lierda_light.constant.AppCst;
+import com.android.hiparker.lierda_light.dao.DaoMaster;
+import com.android.hiparker.lierda_light.dao.DaoSession;
+import com.android.hiparker.lierda_light.dao.Groups;
+import com.android.hiparker.lierda_light.dao.GroupsDao;
+import com.android.hiparker.lierda_light.dao.LightDao;
+import com.android.hiparker.lierda_light.dao.LightTemp;
+import com.android.hiparker.lierda_light.pojo.Light;
+import com.android.hiparker.lierda_light.pojo.LightManager;
+import com.android.hiparker.lierda_light.pojo.ScanRecord;
+import com.android.hiparker.lierda_light.utils.AppUtil;
+import com.android.hiparker.lierda_light.utils.SpUtil;
+import com.android.hiparker.lierda_light.utils.StringUtil;
+import com.android.hiparker.lierda_light.view.LightControlView;
+import com.android.hiparker.lierda_light.view.LightControlView.LightControlListener;
+import com.jeremyfeinstein.slidingmenu.lib.SlidingMenu;
+import com.jeremyfeinstein.slidingmenu.lib.app.SlidingFragmentActivity;
+
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothAdapter.LeScanCallback;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.TypedArray;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.ParcelUuid;
+import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.TextView;
+import android.widget.Toast;
+import de.greenrobot.event.EventBus;
+
+public class HomeActivity extends SlidingFragmentActivity implements OnSeekBarChangeListener, OnClickListener {
+	public static final int REQUEST_EDIT_GROUP = 1;
+	public static final int REQUEST_ENABLE_BT = 2;
+	public static final int SCAN_PERIOD = 5000;
+	
+	private int controlType = 0; // 1:灯   2:灯组
+	private String mLightAddress;
+	private Light mLight;
+	private Groups mGroups;
+	private List<Light> groupLights;
+	private TypedArray colors;
+	
+	private View controlLayout, emptyLayout;
+	private SeekBar mSeekBar;
+	private LightControlView mControlView;
+	protected HomeMenuFragment mFrag;
+	private View model1View, model2View, model3View;
+	
+	private Handler mHandler;
+	private BluetoothManager bManager;
+	private BluetoothAdapter bAdapter;
+	private boolean mScanning = false;
+	
+	private GroupsDao mGroupsDao;
+	private LightDao mLightDao;
+	
+    @Override
+	public void onCreate(Bundle savedInstanceState) {
+    	super.onCreate(savedInstanceState);
+		EventBus.getDefault().register(this);
+    	setBehindContentView(R.layout.menu_frame);
+		setContentView(R.layout.activity_light_control);
+		initActionBar();
+		mHandler = new Handler();
+		colors = getResources().obtainTypedArray(R.array.light_color_list);
+
+		if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+		    Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+		    finish();
+		    return;
+		} else {
+			bManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+	        bAdapter = bManager.getAdapter();
+		}
+		// 检查设备上是否支持蓝牙
+        if (bAdapter == null) {
+            Toast.makeText(this, R.string.error_bluetooth_not_supported,Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+		if (savedInstanceState == null) {
+			FragmentTransaction t = this.getSupportFragmentManager().beginTransaction();
+			mFrag = new HomeMenuFragment();
+			t.replace(R.id.menu_frame, mFrag);
+			t.commit();
+		} else {
+			mFrag = (HomeMenuFragment)this.getSupportFragmentManager().findFragmentById(R.id.menu_frame);
+		}
+		
+		// customize the SlidingMenu
+		SlidingMenu sm = getSlidingMenu();
+		sm.setShadowWidthRes(R.dimen.shadow_width);
+		sm.setShadowDrawable(R.drawable.shadow);
+		sm.setBehindOffsetRes(R.dimen.slidingmenu_offset);
+		sm.setFadeDegree(0.35f);
+		sm.setTouchModeAbove(SlidingMenu.TOUCHMODE_NONE);
+		sm.setOnOpenListener(new SlidingMenu.OnOpenListener() {
+			@Override
+			public void onOpen() {
+				
+			}
+		});
+		sm.setOnClosedListener(new SlidingMenu.OnClosedListener() {
+			@Override
+			public void onClosed() {
+				
+			}
+		});
+		controlLayout = findViewById(R.id.control_layout);
+		emptyLayout = findViewById(R.id.empty_message_txt);
+		model1View = findViewById(R.id.model1);
+		model2View = findViewById(R.id.model2);
+		model3View = findViewById(R.id.model3);
+		model1View.setOnClickListener(this);
+		model2View.setOnClickListener(this);
+		model3View.setOnClickListener(this);
+		
+		mSeekBar = (SeekBar) findViewById(R.id.seekBar);
+		mSeekBar.setOnSeekBarChangeListener(this);
+
+		mControlView = (LightControlView) findViewById(R.id.light_control_view);
+		mControlView.setControlListener(new LightControlListener() {
+			
+			@Override
+			public void onSwitchClick(int status) {
+				controlLight();
+			}
+			
+			@Override
+			public void onProgressChange(int progress) {
+				
+			}
+			
+			@Override
+			public void onEndProgressChange(int progress) {
+				controlLight();
+			}
+			
+			@Override
+			public void onBeginProgressChange(int progress) {
+				
+			}
+		});
+		
+		controlType = SpUtil.getDefaultControlType(this);
+		DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "lights.db", null);
+		SQLiteDatabase db = helper.getWritableDatabase();
+		DaoMaster daoMaster = new DaoMaster(db);
+		DaoSession daoSession = daoMaster.newSession();
+		mGroupsDao = daoSession.getGroupsDao();
+		mLightDao = daoSession.getLightDao();
+		if (controlType == 1) {
+			mLightAddress = SpUtil.getDefaultControlId(this);
+		} else if (controlType == 2) {
+			String groupId = SpUtil.getDefaultControlId(this);
+			
+			mGroups = mGroupsDao.load(Long.valueOf(groupId));
+		}
+		
+		if (controlType < 1) {
+			setControlEmtpy();
+		} else if (controlType == 1) {
+			setControlLight(mLightAddress);
+		} else if (controlType == 2) {
+			setControlGroup(mGroups);
+		}
+		enableRightBtn("Edit", new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (controlType == 1) {
+					goEditLightName();
+				} else if (controlType == 2) {
+					goEditGroup();
+				}
+			}
+		});
+
+        if (!bAdapter.isEnabled()) {
+        	Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        	startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+    }
+    
+    public void setControlEmtpy() {
+    	setTopTitle("Light");
+    	controlLayout.setVisibility(View.GONE);
+    	emptyLayout.setVisibility(View.VISIBLE);
+    }
+    
+    public void setControlLight(String address) {
+    	beforLeaveControl();
+		if (address != null) {
+			controlType = 1;
+			mLightAddress = address;
+			mLight = LightManager.getInstance().getLight(address);
+			if (mLight == null) {
+				List<Light> lights = LightManager.getInstance().getLights();
+				if (lights.isEmpty()) {
+					controlType = 0;
+					setControlEmtpy();
+					return;
+				} else {
+					mLight = lights.get(0);
+					mLightAddress = mLight.device.getAddress();
+				}
+			}
+			setTopTitle(mLight.name);
+	    	controlLayout.setVisibility(View.VISIBLE);
+	    	emptyLayout.setVisibility(View.GONE);
+	    	SpUtil.setDefaultControlType(this, controlType);
+	    	SpUtil.setDefaultControlId(this, address);
+	    	
+//	    	if (getSlidingMenu().isMenuShowing()) {
+//	    		toggle();
+//	    	}
+			if (mLight.getStatus() != Light.STATE_CONNECTED) {
+				enableProgress(true);
+				if (mLight.getStatus() == Light.STATE_DISCONNECTED) {
+					mLight.requestDiscoverServices();
+				}
+			} else {
+				enableProgress(false);
+				initLightParam();
+			}
+		}
+    }
+    
+    public void setControlGroup(Groups groups) {
+    	beforLeaveControl();
+		if (groups != null) {
+			enableProgress(false);
+			
+			mGroups = groups;
+			controlType = 2;
+	    	controlLayout.setVisibility(View.VISIBLE);
+	    	emptyLayout.setVisibility(View.GONE);
+	    	SpUtil.setDefaultControlType(this, controlType);
+	    	SpUtil.setDefaultControlId(this, mGroups.getId().toString());
+	    	
+//	    	if (getSlidingMenu().isMenuShowing()) {
+//	    		toggle();
+//	    	}
+			initGroup();
+			controlLight(mGroups.getValue2(), mGroups.getValue3(), mGroups.getValue4());
+		}
+    }
+    
+
+	private void initGroup() {
+		setTopTitle(mGroups.getName());
+		groupLights = new ArrayList<Light>();
+		for (Light light : LightManager.getInstance().getLights()) {
+			if (light.getStatus() == Light.STATE_CONNECTED) {
+				groupLights.add(light);
+			}
+		}
+	}
+
+	private void initLightParam() {
+		mLight.readCharacteristic(new Light.OnValueReaded() {
+			@Override
+			public void onReaded(byte[] values) {
+				final int openStatus = values[0]&0xFF;
+				final int lightness = (values[1]&0xFF) * 100 /0xFF;
+				final int colorTemp = (values[2]&0xFF) * 100/0xFF;
+				Log.d("Activity", "lightness:" + lightness);
+				Log.d("Activity", "colorTemp:" + colorTemp);
+				
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						mSeekBar.setProgress(lightness);
+						mControlView.setProgress(colorTemp);
+						mControlView.setSwitchStatus(openStatus>0?1:0);
+					}
+				});
+				
+			}
+		});
+	}
+	
+	private void goEditLightName() {
+		
+		LayoutInflater factory = LayoutInflater.from(this);
+		View view = factory.inflate(R.layout.dialog_add_controller, null);
+		final EditText exitName = (EditText) view
+				.findViewById(R.id.controller_name_input);
+		exitName.setText(mLight.name);
+		
+		final AlertDialog dialog  = new AlertDialog.Builder(this, AlertDialog.THEME_HOLO_LIGHT)
+				.setView(view)
+				.create();
+
+		Button negativeBtn = (Button) view
+				.findViewById(R.id.negativeButton);
+		negativeBtn.setText(R.string.cancel);
+		negativeBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				dialog.dismiss();
+			}
+		});
+
+		Button positiveBtn = (Button) view
+				.findViewById(R.id.positiveButton);
+		positiveBtn.setText(R.string.ok);
+		positiveBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				dialog.dismiss();
+				String name = exitName.getText().toString().trim();
+				LightTemp temp = mLightDao.load(mLight.device.getAddress());
+				temp.setName(name);
+				mLight.name = name;
+				mLightDao.update(temp);
+				setTopTitle(name);
+				mFrag.refrshView();
+			}
+		});
+		
+		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+			public void onShow(DialogInterface dialog) {
+				exitName.setSelection(0, exitName.getText().length());
+				exitName.requestFocus();
+				InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+				imm.showSoftInput(exitName, 0);
+			}
+		});
+		
+		dialog.show();
+	}
+	
+	private void goEditGroup() {
+		Intent intent = new Intent(this, EditGroupActivity.class);
+		intent.putExtra("group", mGroups);
+		startActivityForResult(intent, REQUEST_EDIT_GROUP);
+	}
+	
+	@Override
+	protected void onDestroy() {
+		EventBus.getDefault().unregister(this);
+		if (mScanning) {
+			startScanLight(false);
+		}
+		LightManager.getInstance().release();
+		super.onDestroy();
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode == REQUEST_EDIT_GROUP) {
+			if (resultCode == RESULT_OK) {
+				Groups groups = (Groups) data.getSerializableExtra("group");
+				mGroups.setLights(groups.getLights());
+				mGroups.setName(groups.getName());
+				mGroups.setValue1(groups.getValue1());
+				mGroups.setValue2(groups.getValue2());
+				mGroups.setValue3(groups.getValue3());
+				mGroups.setValue4(groups.getValue4());
+				initGroup();
+				mFrag.refrshView();
+			} else if (resultCode == EditGroupActivity.RESULT_DELETE) {
+				Groups groups = (Groups) data.getSerializableExtra("group");
+				mFrag.deleteGroupView(groups);
+			}
+		}
+		
+		if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
+			startScanLight(true);
+		}
+	}
+
+	public void onEventMainThread(Light light) {
+		if (controlType == 1) {
+			if (mLightAddress.equals(light.device.getAddress())) {
+				if (light.getStatus() == Light.STATE_CONNECTED) {
+					enableProgress(false);
+					initLightParam();
+					setControlLight(mLightAddress);
+				} else {
+					enableProgress(true);
+					mLight.requestDiscoverServices();
+				}
+			}
+		} else if (controlType == 2) {
+			if (light.getStatus() == Light.STATE_CONNECTED && !groupLights.contains(light)) {
+				groupLights.add(light);
+				// refrashView
+			}
+			if (light.getStatus() == Light.STATE_DISCONNECTED && groupLights.contains(light)) {
+				groupLights.remove(light);
+				// refrashView
+			}
+		}
+	}
+
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+		
+	}
+
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		
+	}
+
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		if (seekBar == mSeekBar) {
+			controlLight();
+		}
+	}
+	
+	private void controlLight() {
+		int lightness = mSeekBar.getProgress();
+		int colorTemperature = mControlView.getProgress();
+		Log.d("LIGHT Control", "colorTemperature:" + colorTemperature);
+		int lightStatus = mControlView.getSwitchStatus();
+		if (controlType == 1) {
+			mLight.wirteCharacteristic(lightStatus, lightness, colorTemperature);
+		} else {
+			mGroups.setValue2(lightStatus);
+			mGroups.setValue3(lightness);
+			mGroups.setValue4(colorTemperature);
+			for (Light light : groupLights) {
+				light.wirteCharacteristic(lightStatus, lightness, colorTemperature);
+			}
+		}
+	}
+	
+	private void controlLight(int status, int lightness, int colorTemperature) {
+		mSeekBar.setProgress(lightness);
+		mControlView.setSwitchStatus(status);
+		mControlView.setProgress(colorTemperature);
+		if (controlType == 1) {
+			mLight.wirteCharacteristic(status, lightness, colorTemperature);
+		} else {
+			mGroups.setValue2(status);
+			mGroups.setValue3(lightness);
+			mGroups.setValue4(colorTemperature);
+			for (Light light : groupLights) {
+				light.wirteCharacteristic(status, lightness, colorTemperature);
+			}
+		}
+	}
+
+	private boolean mExit;
+
+	private View mMenuBtn;
+	private ProgressBar mPbProgress;
+	private TextView mTxtTitle;
+	private View mRlRefresh;
+	private TextView mRightBtn;
+	private ProgressBar mRefreshProgress;
+
+	private void initActionBar() {
+		mMenuBtn = findViewById(R.id.base_id_menu);
+		mMenuBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				toggle();
+			}
+		});
+		// 标题
+		mTxtTitle = (TextView) findViewById(R.id.base_id_title);
+		// 刷新
+		mRlRefresh = findViewById(R.id.base_id_refresh);
+		mRlRefresh.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				
+			}
+		});
+		mRefreshProgress = (ProgressBar)findViewById(R.id.refresh_progress);
+		mRightBtn = (TextView) findViewById(R.id.base_right_btn);
+
+		//进度
+		mPbProgress = (ProgressBar)findViewById(R.id.base_id_progress);
+	}
+
+	@Override
+	public void onBackPressed() {
+		if (mExit) {
+			beforLeaveControl();
+			finish();
+		} else {
+			mExit = true;
+			AppUtil.showToast(this, R.string.main_exit);
+			new Handler().postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					mExit = false;
+				}
+			}, 2000);
+		}
+	}
+	
+	private void beforLeaveControl() {
+		if (controlType == 2 && mGroups != null && mGroupsDao != null) {
+			mGroupsDao.update(mGroups);
+		}
+	}
+	
+	/**
+	 * 设置标题
+	 */
+	public void setTopTitle(int resId) {
+		mTxtTitle.setText(resId);
+	}
+
+	/**
+	 * 设置标题
+	 * 
+	 * @param title
+	 */
+	public void setTopTitle(String title) {
+		mTxtTitle.setText(StringUtil.nullToEmpty(title));
+	}
+
+	/**
+	 * 是否显示进度条（圈）
+	 * @param enabled
+	 */
+	public void enableProgress(boolean enabled) {
+		if(enabled) {
+			mPbProgress.setVisibility(View.VISIBLE);
+		} else {
+			mPbProgress.setVisibility(View.GONE);
+		}
+	}
+
+	public void enableRightBtn(String text, View.OnClickListener listener) {
+		mRightBtn.setText(text);
+		mRightBtn.setVisibility(View.VISIBLE);
+		mRightBtn.setOnClickListener(listener);
+	}
+
+
+	public void startScanLight(final boolean enable) {
+		if (enable) {
+			mHandler.postDelayed(new Runnable(){
+				@Override
+				public void run() {
+					mScanning = false;
+					bAdapter.stopLeScan(mLeScanCallback);
+					mFrag.enableRefreshProgress(false);
+				}
+			}, SCAN_PERIOD);
+			mScanning = true;
+			bAdapter.startLeScan(mLeScanCallback);
+			mFrag.enableRefreshProgress(true);
+		} else {
+			mScanning = false;
+			bAdapter.stopLeScan(mLeScanCallback);
+			mFrag.enableRefreshProgress(false);
+		}
+	}
+	
+	private LeScanCallback mLeScanCallback = new LeScanCallback() {
+
+		@Override
+		public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
+			int type = device.getType();
+			Log.d("", "----scan type:" + type + "         name:"+device.getName());
+			ScanRecord record = ScanRecord.parseFromBytes(scanRecord);
+			
+			boolean isLight = false;
+			if (record.getServiceUuids() != null) {
+				for (ParcelUuid uuid : record.getServiceUuids()) {
+					Log.d("BLE", "---uuid:" + uuid.toString());
+					if (AppCst.LIGHT_UUID.equals(uuid.toString())) {
+						isLight = true;
+					}
+				}
+			}
+			if (!isLight) {
+				return;
+			}
+			final Light light = LightManager.getInstance().makLightByDevice(device);
+			
+			if (light == null) {
+				return;
+			}
+			light.connect(HomeActivity.this, mHandler);
+			
+			
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					LightTemp temp = mLightDao.load(light.device.getAddress());
+					if (temp == null) {
+						temp = new LightTemp(light.device.getAddress());
+						temp.setName(light.device.getName());
+						int random = new Random().nextInt(6);
+						temp.setColor(colors.getColor(random, Color.GRAY));
+						mLightDao.insert(temp);
+					}
+					light.mColor = temp.getColor();
+					
+					mFrag.loadLightView(light);
+				}
+			});
+		}
+		
+	};
+
+	@Override
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.model1:
+			controlLight(1, 20, 20);
+			break;
+		case R.id.model2:
+			controlLight(1, 50, 50);
+			break;
+		case R.id.model3:
+			controlLight(1, 80, 80);
+			break;
+		}
+	}
+}

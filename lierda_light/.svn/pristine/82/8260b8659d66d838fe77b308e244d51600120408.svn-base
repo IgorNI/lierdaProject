@@ -1,0 +1,70 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:custom="http://schemas.android.com/apk/res/com.android.hiparker.lierda_light"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_gravity="center_horizontal" >
+
+        <com.android.hiparker.lierda_light.view.LightGroupView
+            android:id="@+id/light_group_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            custom:textSize="68sp"
+            custom:tickSize="50dp"
+            custom:tickSrc="@drawable/default_light"
+            custom:tickTextColor="@color/common_color_gray_text"
+            custom:tickTextSize="@dimen/common_size_tiny" >
+        </com.android.hiparker.lierda_light.view.LightGroupView>
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/group_name_edit"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@null"
+        android:gravity="center"
+        android:hint="Enter a group name"
+        android:maxLength="12"
+        android:singleLine="true"
+        android:textColor="@color/common_color_gray_text"
+        android:textColorHint="#bbbbbb"
+        android:textSize="@dimen/common_size_normal" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:paddingBottom="3dp"
+        android:text="其它灯"
+        android:textColor="@color/common_color_gray_text"
+        android:textSize="@dimen/common_size_small" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1px"
+        android:layout_marginLeft="16dp"
+        android:background="@color/common_color_gray_text" />
+
+    <GridLayout
+        android:id="@+id/light_layout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginLeft="16dp"
+        android:layout_weight="1"
+        android:columnCount="4" >
+
+        <ImageButton
+            android:id="@+id/add"
+            android:layout_width="80dp"
+            android:layout_height="64dp"
+            android:layout_columnWeight="1"
+            android:background="@null"
+            android:src="@drawable/add" />
+    </GridLayout>
+
+</LinearLayout>

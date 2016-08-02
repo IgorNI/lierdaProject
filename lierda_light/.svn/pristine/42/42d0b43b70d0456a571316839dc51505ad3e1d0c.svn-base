@@ -1,0 +1,83 @@
+package com.android.hiparker.lierda_light;
+
+import com.android.hiparker.lierda_light.base.BaseTitleActivity;
+import com.android.hiparker.lierda_light.dao.Groups;
+import com.android.hiparker.lierda_light.pojo.Light;
+import com.android.hiparker.lierda_light.pojo.LightManager;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
+
+public class LightControlActivity extends BaseTitleActivity implements OnSeekBarChangeListener {
+	private int controlType = 0; // 1:灯   2:灯组
+	private Light mLight;
+	private Groups mGroups;
+	
+	private SeekBar mSeekBar1, mSeekBar2;
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		String address = getIntent().getStringExtra("lightAddress");
+		if (address != null) {
+			controlType = 1;
+			mLight = LightManager.getInstance().getLight(address);
+			if (mLight == null) {
+				finish();
+				return;
+			}
+		}
+		mGroups = (Groups) getIntent().getSerializableExtra("group");
+		if (mGroups != null) {
+			controlType = 2;
+		}
+		if (controlType < 1) {
+			finish();
+			return;
+		}
+		mLight.readCharacteristic(new Light.OnValueReaded() {
+			@Override
+			public void onReaded(byte[] values) {
+				boolean isOpen = (values[0]&0xFF) == 1;
+				int lightness = (values[1]&0xFF) * 100 /0xFF;
+				int colorTemp = (values[2]&0xFF) * 100/0xFF;
+				Log.d("Activity", "lightness:" + lightness);
+				Log.d("Activity", "colorTemp:" + colorTemp);
+				mSeekBar1.setProgress(lightness);
+				mSeekBar2.setProgress(colorTemp);
+			}
+		});
+		
+		setContentView(R.layout.activity_light_control);
+		mSeekBar1 = (SeekBar) findViewById(R.id.seekBar1);
+		mSeekBar2 = (SeekBar) findViewById(R.id.seekBar2);
+		mSeekBar1.setOnSeekBarChangeListener(this);
+		mSeekBar2.setOnSeekBarChangeListener(this);
+	}
+
+	@Override
+	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+		
+	}
+
+	@Override
+	public void onStartTrackingTouch(SeekBar seekBar) {
+		
+	}
+
+	@Override
+	public void onStopTrackingTouch(SeekBar seekBar) {
+		if (seekBar == mSeekBar1) {
+			
+		} else if (seekBar == mSeekBar2) {
+			
+		}
+		int lightness = mSeekBar1.getProgress();
+		int colorTemperature = mSeekBar2.getProgress();
+		if (controlType == 1) {
+			mLight.wirteCharacteristic(true, lightness, colorTemperature);
+		}
+	}
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <integer-array name="light_color_list">
+        <item>@color/light_color1</item>
+        <item>@color/light_color2</item>
+        <item>@color/light_color3</item>
+        <item>@color/light_color4</item>
+        <item>@color/light_color5</item>
+        <item>@color/light_color6</item>
+    </integer-array>
+
+</resources>

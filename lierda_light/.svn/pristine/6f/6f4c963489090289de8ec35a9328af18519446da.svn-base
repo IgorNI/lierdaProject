@@ -1,0 +1,215 @@
+package com.android.hiparker.lierda_light.pojo;
+
+import java.util.List;
+
+import com.android.hiparker.lierda_light.constant.AppCst;
+import com.android.hiparker.lierda_light.utils.HexUtil;
+
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
+import android.content.Context;
+import android.os.Handler;
+import android.util.Log;
+
+public class Light {
+	
+	public String name;
+	public BluetoothDevice device;
+	public BluetoothGatt mBluetoothGatt;
+	private BluetoothGattService mGattService;
+	private BluetoothGattCharacteristic mGattCharacteristic;
+	private OnValueReaded valueListener;
+	
+	Light() {
+		
+	}
+	
+	Light(BluetoothDevice dev) {
+		device = dev;
+		name = device.getName();
+	}
+
+    public List<BluetoothGattService> getSupportedGattServices() {
+        if (mBluetoothGatt == null)
+            return null;
+
+        return mBluetoothGatt.getServices();
+    }
+
+	public boolean connect(Context context, final Handler mHandler) {
+
+        if (device == null) {
+            Log.w("", "Device not found.  Unable to connect.");
+            return false;
+        }
+        if (mBluetoothGatt != null) {
+            Log.d("", "Trying to use an existing mBluetoothGatt for connection.");
+            if (mBluetoothGatt.connect()) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        // We want to directly connect to the device, so we are setting the
+        // autoConnect
+        // parameter to false.
+        Log.e("BLE", "发起连接");
+        
+        
+
+    	
+    	// Implements callback methods for GATT events that the app cares about. For
+        // example,
+        // connection change and services discovered.
+        BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+
+            @Override
+            public void onConnectionStateChange(BluetoothGatt gatt, int status,
+                    int newState) {
+            	Log.e("BLE", "onConnectionStateChange");
+                if (status == BluetoothProfile.STATE_DISCONNECTED
+                        && newState == BluetoothProfile.STATE_CONNECTED) {
+                    Log.i("BLE", "Connected to GATT server.");
+                    // Attempts to discover services after successful connection.
+                    Log.i("BLE", "Attempting to start service discovery:"
+                            + mBluetoothGatt.discoverServices());
+                    Log.e("BLE", "连接成功 : discoverServices");
+                    mHandler.sendEmptyMessage(AppCst.MESSAGE_START_SUCCESS);
+                } else if (status == BluetoothProfile.STATE_DISCONNECTED
+                        && newState == BluetoothProfile.STATE_DISCONNECTED) {
+//                    setConnStatus(false);
+                    Log.e("BLE", "连接失败");
+                    Log.i("", "Disconnected from GATT server.");
+                    mHandler.sendEmptyMessage(AppCst.STATE_CONNECTFAILED);
+                }
+            }
+
+            @Override
+            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            	Log.e("BLE","onServicesDiscovered-----  status:" + status);
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+//                    broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                    displayGattServices(getSupportedGattServices());
+                    mHandler.sendEmptyMessage(AppCst.MESSAGE_BLUETOOTH_INIT);
+                } else {
+                    Log.w("BLE", "onServicesDiscovered received: " + status);
+                }
+            }
+
+            @Override
+            public void onCharacteristicRead(BluetoothGatt gatt,
+                    BluetoothGattCharacteristic characteristic, int status) {
+            	Log.e("BLE","onCharacteristicRead");
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+//                    broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+
+                	byte[] values = characteristic.getValue();
+                	Log.d("BLE", "onCharacteristicRead:" + HexUtil.bytes2HexStr(values));
+                	if (valueListener != null) {
+                		valueListener.onReaded(values);
+                	}
+                }
+            }
+
+            @Override
+            public void onDescriptorWrite(BluetoothGatt gatt,
+                    BluetoothGattDescriptor descriptor, int status) {
+
+            	Log.e("BLE","onDescriptorWriteonDescriptorWrite = " + status
+                        + ", descriptor =" + descriptor.getUuid().toString());
+            }
+
+            @Override
+            public void onCharacteristicChanged(BluetoothGatt gatt,
+                    BluetoothGattCharacteristic characteristic) {
+//                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                if (characteristic.getValue() != null) {
+                	Log.e("BLE",characteristic.getStringValue(0));
+                }
+                Log.e("BLE","--------onCharacteristicChanged-----");
+            }
+
+            @Override
+            public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+
+            }
+
+            public void onCharacteristicWrite(BluetoothGatt gatt,
+                    BluetoothGattCharacteristic characteristic, int status) {
+            	Log.e("BLE","--------write success----- status:" + status);
+            };
+        };
+        mBluetoothGatt = device.connectGatt(context, true, mGattCallback);
+        Log.d("", "Trying to create a new connection.");
+        return true;
+    }
+	
+	  
+    public void wirteCharacteristic(boolean open, int lightness, int colorTemperature) {
+        if (mBluetoothGatt == null) {
+            Log.w("", "BluetoothAdapter not initialized");
+            return;
+        }
+        byte[] values = new byte[]{(byte)(open?0x01:0x00), (byte)(0xff*lightness/100), (byte)(0xff*colorTemperature/100), 0x00, 0x00};
+        Log.d("BLE", "wirteCharacteristic:    " + HexUtil.bytes2HexStr(values));
+        mGattCharacteristic.setValue(values);
+        mBluetoothGatt.writeCharacteristic(mGattCharacteristic);
+    }
+    
+    /**
+     * Request a read on a given {@code BluetoothGattCharacteristic}. The read
+     * result is reported asynchronously through the
+     * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
+     * callback.
+     * 
+     * @param characteristic
+     *            The characteristic to read from.
+     */
+    public void readCharacteristic(OnValueReaded listener) {
+        if (mBluetoothGatt == null) {
+            Log.w("BLE", "BluetoothAdapter not initialized");
+            return;
+        }
+        valueListener = listener;
+        boolean result = mBluetoothGatt.readCharacteristic(mGattCharacteristic);
+        Log.d("BLE", "readCharacteristic return:" + result);
+    }
+    
+    
+    private void displayGattServices(List<BluetoothGattService> gattServices) {
+        if (gattServices == null)
+            return;
+        String uuid = null;
+
+        // Loops through available GATT Services.
+        for (BluetoothGattService gattService : gattServices) {
+            uuid = gattService.getUuid().toString();
+            Log.d("", "gattService UUID:" + uuid + "                name:" );
+            if (uuid.startsWith("0000ff13")) {
+            	mGattService = gattService;
+            }
+
+            List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+
+            // Loops through available Characteristics.
+            for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
+                uuid = gattCharacteristic.getUuid().toString();
+                Log.d("", "gattCharacteristic UUID:" + uuid);
+                
+                if (uuid.startsWith("0000ff01")) {
+                	mGattCharacteristic = gattCharacteristic;
+                }
+            }
+        }
+    }
+    
+    public interface OnValueReaded {
+    	public void onReaded(byte[] values);
+    }
+}

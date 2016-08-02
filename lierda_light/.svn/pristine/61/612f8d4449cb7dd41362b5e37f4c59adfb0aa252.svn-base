@@ -1,0 +1,9 @@
+package com.android.hiparker.lierda_light.constant;
+
+public class AppCst {
+
+	public static final int MESSAGE_START_SUCCESS = 1;
+	public static final int STATE_CONNECTFAILED = 2;
+	public static final int MESSAGE_BLUETOOTH_INIT = 3;
+	
+}

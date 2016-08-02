@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="LightGroupView">
+		<attr name="tickSize" format="dimension" />
+		<attr name="tickTextSize" format="dimension" />
+		<attr name="tickTextColor" format="reference|color" />
+		<attr name="textSize" format="dimension" />
+		<attr name="tickSrc" format="reference" />
+    </declare-styleable>
+    
+    <declare-styleable name="LightTextView">
+        <attr name="upDrawableSize" format="dimension"></attr>
+    </declare-styleable>
+    
+    <declare-styleable name="ColorTextView">
+        <attr name="textNumber" format="integer"></attr>
+        <attr name="topDrawableSize" format="dimension"></attr>
+        <attr name="drawableTextSize" format="dimension"></attr>
+    </declare-styleable>
+
+</resources>

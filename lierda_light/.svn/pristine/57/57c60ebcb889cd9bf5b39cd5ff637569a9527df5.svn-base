@@ -1,0 +1,98 @@
+package com.android.hiparker.lierda_light.view;
+
+import com.android.hiparker.lierda_light.dao.LightTemp;
+import com.android.hiparker.lierda_light.utils.ScreenUtil;
+
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Paint.FontMetrics;
+import android.graphics.Rect;
+
+public class LightThumb {
+	public float mAngle = 0;
+	public float centerX;
+	public float centerY;
+	
+	private LightTemp mLightTemp;
+	private Bitmap mTickBitmap;
+	private float mTickSize;
+	private int mTickTextColor;
+	private float mTickTextSize;
+	private Paint mPaint;
+
+    // Indicates whether this thumb is currently pressed and active.
+    private boolean mIsPressed = false;
+    
+	public LightThumb(LightTemp temp, Bitmap bitmap, float size, int textColor, float textSize, Paint paint) {
+		mLightTemp = temp;
+		mTickBitmap = bitmap;
+		mTickSize = size;
+		mTickTextColor = textColor;
+		mTickTextSize = textSize;
+		mPaint = paint;
+	}
+
+	void draw(Canvas canvas) {
+//		int w = canvas.getWidth();
+//    	int h = canvas.getHeight();
+//    	
+//    	int count = mLights.size();
+//    	double jiange = Math.PI * 2/count;
+//    	double current = 0;
+//    	double bgR = (mSize)/2 - mTickSize;
+//    	int i = 0;
+//
+//    		double x = 0;
+//    		double y = 0;
+//    		if (current < Math.PI/2) {
+//    			x = w/2 + bgR * Math.sin(current);
+//    			y = h/2 - bgR * Math.cos(current);
+//    		} else if (current < Math.PI) {
+//    			x = w/2 + bgR * Math.sin(Math.PI - current);
+//    			y = h/2 + bgR * Math.cos(Math.PI - current);
+//    		} else if (current < Math.PI *3 /2) {
+//    			x = w/2 - bgR * Math.sin(current - Math.PI);
+//    			y = h/2 + bgR * Math.cos(current - Math.PI);
+//    		} else {
+//    			x = w/2 - bgR * Math.sin(Math.PI * 2 - current);
+//    			y = h/2 - bgR * Math.cos(Math.PI * 2 - current);
+//    		}
+    		
+    		double r = mTickSize/2;
+    		Rect src = new Rect(0, 0, mTickBitmap.getWidth(), mTickBitmap.getHeight());
+    		Rect dst = new Rect((int)(centerX - r), (int)(centerY - r), (int)(centerX + r), (int)(centerY + r));
+    		canvas.drawBitmap(mTickBitmap, src, dst, mPaint);
+        	mPaint.setStyle(Paint.Style.FILL);
+        	mPaint.setColor(mTickTextColor);
+        	mPaint.setTextSize(mTickTextSize);
+        	mPaint.setTextAlign(Paint.Align.CENTER);
+        	FontMetrics fr = mPaint.getFontMetrics();
+        	float height = fr.bottom - fr.top + 2;
+        	int padding = ScreenUtil.dip2px(5);
+        	float baseline = (int)(centerY + r + height/2 + padding);
+    		canvas.drawText(mLightTemp.getName(), centerX, baseline, mPaint);
+	}
+	
+
+    boolean isPressed() {
+        return mIsPressed;
+    }
+
+    void press() {
+        mIsPressed = true;
+    }
+
+    void release() {
+        mIsPressed = false;
+    }
+    
+    boolean isInTargetZone(float x, float y) {
+    	double r = mTickSize/2;
+    	if (Math.abs(x - centerX) <= r && Math.abs(y - centerY) <= r) {
+            return true;
+        }
+        return false;
+    }
+
+}
