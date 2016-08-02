@@ -1,0 +1,12 @@
+<com.android.hiparker.lierda_light.view.ColorTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:custom="http://schemas.android.com/apk/res/com.android.hiparker.lierda_light"
+    android:id="@+id/textView1"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:textSize="@dimen/common_size_smaller"
+    android:singleLine="true"
+    android:ellipsize="end"
+    custom:drawableTextSize="25sp"
+    custom:textNumber="0"
+    android:gravity="center_horizontal"
+    custom:topDrawableSize="50dp" />

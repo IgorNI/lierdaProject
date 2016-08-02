@@ -1,0 +1,38 @@
+[
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_selected_focused_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_selected_focused_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_selected_pressed_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_selected_pressed_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\progress_large_circle.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\progress_large_circle.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_selected_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_selected_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_unselected_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_unselected_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\launcher.jpg",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\launcher.jpg"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_unselected_focused_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_unselected_focused_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\vpi__tab_unselected_pressed_holo.9.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\vpi__tab_unselected_pressed_holo.9.png"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\drawable-hdpi-v4\\ic_launcher.png",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\drawable-hdpi\\ic_launcher.png"
+    }
+]

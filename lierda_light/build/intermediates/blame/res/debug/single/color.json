@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\color\\vpi__dark_theme.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\color\\vpi__dark_theme.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\color\\button_positive_text_color.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\color\\button_positive_text_color.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\color\\vpi__light_theme.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\color\\vpi__light_theme.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\color\\button_negative_text_color.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\color\\button_negative_text_color.xml"
+    }
+]

@@ -1,0 +1,66 @@
+[
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\feature_activity.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\feature_activity.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\dialog_footer.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\dialog_footer.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\item_group.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\item_group.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_main.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_launch.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_launch.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\feature_layout.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\feature_layout.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\menu_frame.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\menu_frame.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\slidingmenumain.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\exploded-aar\\lierdaProject\\SlidingMenu\\unspecified\\res\\layout\\slidingmenumain.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_edit_group.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_edit_group.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\dialog_add_controller.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\dialog_add_controller.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_base.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_base.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\item_light.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\item_light.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_home.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_home.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\action_bar.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\action_bar.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_light_control.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_light_control.xml"
+    },
+    {
+        "merged": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\build\\intermediates\\res\\merged\\debug\\layout\\activity_temp.xml",
+        "source": "E:\\lierda\\project\\lierdaProject\\lierdaProject\\lierda_light\\res\\layout\\activity_temp.xml"
+    }
+]

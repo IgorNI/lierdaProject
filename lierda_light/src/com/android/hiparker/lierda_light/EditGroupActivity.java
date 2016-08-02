@@ -1,0 +1,269 @@
+package com.android.hiparker.lierda_light;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import com.android.hiparker.lierda_light.base.BaseTitleActivity;
+import com.android.hiparker.lierda_light.dao.DaoMaster;
+import com.android.hiparker.lierda_light.dao.DaoSession;
+import com.android.hiparker.lierda_light.dao.Groups;
+import com.android.hiparker.lierda_light.dao.GroupsDao;
+import com.android.hiparker.lierda_light.dao.LightDao;
+import com.android.hiparker.lierda_light.dao.LightTemp;
+import com.android.hiparker.lierda_light.pojo.Light;
+import com.android.hiparker.lierda_light.pojo.LightManager;
+import com.android.hiparker.lierda_light.utils.AppUtil;
+import com.android.hiparker.lierda_light.utils.ScreenUtil;
+import com.android.hiparker.lierda_light.utils.StringUtil;
+import com.android.hiparker.lierda_light.view.LightGroupView;
+import com.android.hiparker.lierda_light.view.LightGroupView.LightGroupViewListener;
+import com.android.hiparker.lierda_light.view.LightTextView;
+
+import android.content.Intent;
+import android.content.res.TypedArray;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.EditText;
+import android.widget.GridLayout;
+import android.widget.LinearLayout;
+import android.widget.GridLayout.LayoutParams;
+import de.greenrobot.event.EventBus;
+
+public class EditGroupActivity extends BaseTitleActivity implements OnClickListener {
+	private static final int STATUS_CREATE = 1;
+	private static final int STATUS_DELETE = 2;
+	private static final int STATUS_EDIT = 3;
+	public static final int RESULT_DELETE = 120;
+	private int mStatus;
+	
+	private GroupsDao mGroupsDao;
+	private LightDao mLightDao;
+	private Groups mGroups;
+	private GridLayout mLightLayout;
+	private List<Light> mAllLights;
+	private List<String> mLightAddress;
+	private List<LightTemp> mLightTemps;
+	private LightGroupView mLightGroupView;
+	private EditText mNameEdit;
+	private View addBtn;
+
+	private TypedArray colors;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		// 注册订阅者
+		EventBus.getDefault().register(this);
+		mGroups = (Groups) getIntent().getSerializableExtra("group");
+		if (mGroups == null) {
+			mGroups = new Groups();
+			changeStatus(STATUS_CREATE);
+		} else {
+			changeStatus(STATUS_DELETE);
+		}
+		DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "lights.db", null);
+		SQLiteDatabase db = helper.getWritableDatabase();
+		DaoMaster daoMaster = new DaoMaster(db);
+		DaoSession daoSession = daoMaster.newSession();
+		mGroupsDao = daoSession.getGroupsDao();
+		mLightDao = daoSession.getLightDao();
+		
+		setContentView(R.layout.activity_edit_group);
+		mLightLayout = (GridLayout) findViewById(R.id.light_layout);
+		mLightGroupView = (LightGroupView) findViewById(R.id.light_group_view);
+		mLightGroupView.setOnItemClickListener(new LightGroupViewListener() {
+			@Override
+			public void onItemClick(int index, LightTemp temp) {
+				mLightGroupView.deleteLight(temp);
+				mLightAddress.remove(temp.getAddress());
+				Light light = LightManager.getInstance().getLight(temp.getAddress());
+				if (light != null) {
+					mAllLights.add(light);
+					loadLightView(light);
+				}
+			}
+
+			@Override
+			public void onValueChange() {
+				changeStatus(STATUS_EDIT);
+			}
+		});
+		mNameEdit = (EditText) findViewById(R.id.group_name_edit);
+		addBtn = findViewById(R.id.add);
+		mLightLayout.removeView(addBtn);
+		enableBack(true);
+		
+		mAllLights = new ArrayList<Light>();
+		mAllLights.addAll(LightManager.getInstance().getLights()); //
+		
+		mLightAddress = new ArrayList<String>();
+		mLightTemps = new ArrayList<LightTemp>();
+		String lightsStr = mGroups.getLights(); // 获取蓝牙设备
+		if (lightsStr != null) {
+			String[] lightStrs = lightsStr.split(",");
+			for (String str : lightStrs) {
+				mLightAddress.add(str);
+				Light light = LightManager.getInstance().getLight(str);
+				LightTemp temp = mLightDao.load(str);
+				if (light != null) {
+					temp.setName(light.name);
+				}
+				mLightTemps.add(temp);
+			}
+		}
+		List<Light> lights = LightManager.getInstance().getLights();
+		loadLightView(lights.toArray(new Light[0]));
+		
+		if (mGroups.getId() != null) {
+			mNameEdit.setText(mGroups.getName());
+			mNameEdit.setSelection(mNameEdit.getText().length());
+			mLightGroupView.setLights(mLightTemps);
+		}
+		mNameEdit.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+				
+			}
+			
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+				
+			}
+			
+			@Override
+			public void afterTextChanged(Editable s) {
+				changeStatus(STATUS_EDIT);
+			}
+		});
+		
+		colors = getResources().obtainTypedArray(R.array.light_color_list);
+	}
+	
+	private void saveGroupValue() {
+		String name = mNameEdit.getText().toString();
+		String lights = StringUtil.strImplode(",", mLightAddress.toArray(new String[0]));
+		if (TextUtils.isEmpty(name) || TextUtils.isEmpty(lights)) {
+			AppUtil.showToast(this, "数据不完整");
+			return;
+		}
+		mGroups.setName(name);
+		mGroups.setLights(lights);
+//		mGroups.setGroupLights(lights);
+		if (mGroups.getValue1() <= 0) {
+			int random = new Random().nextInt(6);
+			int color = colors.getColor(random, Color.GRAY);
+			mGroups.setValue1(color);
+		}
+		if (mGroups.getId() == null) {
+			long id = mGroupsDao.insert(mGroups);
+			mGroups.setId(id);
+		} else {
+			mGroupsDao.update(mGroups);
+		}
+		Intent data = new Intent();
+		data.putExtra("group", mGroups);
+		setResult(RESULT_OK, data);
+		finish();
+	}
+	
+	private void deleteGroup() {
+		mGroupsDao.delete(mGroups);
+		Intent data = new Intent();
+		data.putExtra("group", mGroups);
+		setResult(RESULT_DELETE, data);
+		finish();
+	}
+
+	@Override
+	protected void onDestroy() {
+		EventBus.getDefault().unregister(this);
+		super.onDestroy();
+	}
+
+	public void onEventMainThread(Light light) {
+		if (!mAllLights.contains(light)) {
+			mAllLights.add(light);
+			loadLightView(light);
+		}
+	}
+
+	private void loadLightView(Light...lights) {
+		if (lights == null) {
+			return;
+		}
+		for (Light light : lights) {
+			if (light.device == null || light.device.getAddress() == null || mLightAddress.contains(light.device.getAddress())) {
+				continue;
+			}
+			LightTextView view = (LightTextView) LinearLayout.inflate(this, R.layout.item_light, null);
+			view.setText(light.name);
+			view.setTextColor(light.mColor);
+			view.setTag(light);
+			view.setOnClickListener(this);
+			
+			GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+			GridLayout.LayoutParams p = (LayoutParams) addBtn.getLayoutParams();
+			params.columnSpec = p.columnSpec;
+			params.topMargin = getResources().getDimensionPixelSize(R.dimen.grid_item_margin);
+			params.bottomMargin = getResources().getDimensionPixelSize(R.dimen.grid_item_margin);
+			params.width = ScreenUtil.dip2px(80);
+			mLightLayout.addView(view, params);
+		}
+	}
+
+	@Override
+	public void onClick(View v) {
+		Object object = v.getTag();
+		if (object instanceof Light) {
+			Light light = (Light) object;
+			
+			String address = light.device.getAddress();
+			mLightAddress.add(address);
+			LightTemp temp = mLightDao.load(address);
+			mLightGroupView.addLight(temp);
+			mLightLayout.removeView(v);
+		}
+	}
+	
+	private void changeStatus(int status) {
+		if (mStatus != status) {
+			mStatus = status;
+			switch (mStatus) {
+			case STATUS_CREATE:
+				setTopTitle("创建组");
+				enableRightBtn("保存", new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						saveGroupValue();
+					}
+				});
+				break;
+			case STATUS_DELETE:
+				setTopTitle(mGroups.getName());
+				enableRightBtn("删除", new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						deleteGroup();
+					}
+				});
+				break;
+			case STATUS_EDIT:
+				setTopTitle(mGroups.getName());
+				enableRightBtn("保存", new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						saveGroupValue();
+					}
+				});
+				break;
+			}
+		}
+	}
+}

@@ -1,0 +1,503 @@
+package com.android.hiparker.lierda_light.view;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.android.hiparker.lierda_light.R;
+import com.android.hiparker.lierda_light.utils.ScreenUtil;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+
+public class LightControlView extends View {
+
+    private int mDefaultWidth = 500;
+    private int mDefaultHeight = 100;
+    private float r1, r2, r3;// mScaleBg从内到外，各圆的半径
+    private Bitmap mBackground;
+    private Bitmap mScaleBg;
+    private Bitmap[] mSwitchButton; //0: close   1: open
+    private Thumb mThumb;
+    private SwitchButton mSwitch;
+    private Paint mPaint;
+    private Integer[] points;
+    private int mProgress;
+    
+    private LightControlListener mListener;
+    
+	public LightControlView(Context context) {
+		super(context);
+	}
+
+	public LightControlView(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		viewInit(context, attrs);
+	}
+
+	public LightControlView(Context context, AttributeSet attrs, int defStyle) {
+		super(context, attrs, defStyle);
+		viewInit(context, attrs);
+	}
+
+	private void viewInit(Context context, AttributeSet attrs) {
+		mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		
+		BitmapDrawable background = (BitmapDrawable) context.getResources().getDrawable(R.drawable.control_background);
+		mBackground = background.getBitmap();
+		BitmapDrawable scaleBg = (BitmapDrawable) context.getResources().getDrawable(R.drawable.control_scale);
+		mScaleBg = scaleBg.getBitmap();
+		parserScale(mScaleBg);
+		mSwitchButton = new Bitmap[2];
+		BitmapDrawable switchButton = (BitmapDrawable)context.getResources().getDrawable(R.drawable.dengpaomie);
+		mSwitchButton[0] = switchButton.getBitmap();
+		switchButton = (BitmapDrawable)context.getResources().getDrawable(R.drawable.dengpaoliang);
+		mSwitchButton[1] = switchButton.getBitmap();
+		
+		mDefaultWidth = mBackground.getWidth();
+		mDefaultHeight = mScaleBg.getHeight() + (int)(r2 - r1);
+		mThumb = new Thumb((int)(r2 - r1)/2, ScreenUtil.dip2px(3));
+		mSwitch = new SwitchButton(mDefaultWidth/2, mDefaultHeight/2);
+	}
+	
+	private void parserScale(Bitmap bitmap) {
+		int w = bitmap.getWidth();
+		int h = bitmap.getHeight();
+		StringBuffer buffer = new StringBuffer();
+		StringBuffer buffer2 = new StringBuffer();
+		List<Integer> pointList = new ArrayList<Integer>();
+		for (int i = 0; i < w; i++) {
+			int pixel = bitmap.getPixel(i, h/2);
+			buffer.append(Integer.toHexString(pixel)).append(" ");
+			
+			if (i + 1 != w) {
+				int pixelN = bitmap.getPixel(i + 1, h/2); // ？why
+				int diff = colorDiff(pixel, pixelN);
+				buffer2.append(diff + " ");
+				if (diff > 0) {
+					int count = pointList.size();
+					if (count > 0) {
+						if ((i - pointList.get(count - 1)) > 2) {
+							pointList.add(i);
+						}
+					} else {
+						pointList.add(i);
+					}
+				}
+			}
+		}
+		points = pointList.toArray(new Integer[0]);
+		r1 = (points[2] - points[1])/2;
+		r2 = (points[3] - points[0])/2;
+		r3 = bitmap.getWidth()/2;
+		
+	}
+	
+	private static int colorDiff(int color1, int color2) {
+		int a = Color.alpha(color1) - Color.alpha(color2);
+		int b = Color.red(color1) - Color.red(color2);
+		int c = Color.green(color1) - Color.green(color2);
+		int d = Color.blue(color1) - Color.blue(color2);
+		
+		int r = Math.abs(a) + Math.abs(b) + Math.abs(c) + Math.abs(d);
+		if (r < 50) {
+			r = 0;
+		}
+		return r;
+	}
+
+	@Override
+	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+
+		int width;
+		int height;
+
+		// Get measureSpec mode and size values.
+		final int measureWidthMode = MeasureSpec.getMode(widthMeasureSpec);
+		final int measureHeightMode = MeasureSpec.getMode(heightMeasureSpec);
+		final int measureWidth = MeasureSpec.getSize(widthMeasureSpec);
+		final int measureHeight = MeasureSpec.getSize(heightMeasureSpec);
+
+		// The RangeBar width should be as large as possible.
+		if (measureWidthMode == MeasureSpec.AT_MOST) {
+			width = measureWidth;
+		} else if (measureWidthMode == MeasureSpec.EXACTLY) {
+			width = measureWidth;
+		} else {
+			width = mDefaultWidth;
+		}
+
+		// The RangeBar height should be as small as possible.
+		if (measureHeightMode == MeasureSpec.AT_MOST) {
+			height = Math.min(mDefaultHeight, measureHeight);
+		} else if (measureHeightMode == MeasureSpec.EXACTLY) {
+			height = measureHeight;
+		} else {
+			height = mDefaultHeight;
+		}
+
+		setMeasuredDimension(width, height);
+	}
+	
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+
+        super.onSizeChanged(w, h, oldw, oldh);
+
+        final Context ctx = getContext();
+        
+        double angle = mProgress/50*Math.PI;
+        mThumb.setAngle(angle);
+        mSwitch.onSizeChange();
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        
+        drawBackground(canvas);
+//        drawHelp(canvas);
+        drawThumb(canvas);
+        drawSwitchButton(canvas);
+//        drawLightCount(canvas);
+//        drawLightTick(canvas);
+    }
+    
+    private void drawBackground(Canvas canvas) {
+    	int left = (getWidth() - mBackground.getWidth())/2;
+    	int top = (getHeight() - mBackground.getHeight())/2;
+    	int right = (getWidth() + mBackground.getWidth())/2;
+    	int bottom = (getHeight() + mBackground.getHeight())/2;
+    	Rect src = new Rect(0, 0, mBackground.getWidth(), mBackground.getHeight());
+    	Rect dst = new Rect(left, top, right, bottom);
+    	canvas.drawBitmap(mBackground, src, dst, mPaint);
+    	
+    	left = (getWidth() - mScaleBg.getWidth())/2;
+    	top = (getHeight() - mScaleBg.getHeight())/2;
+    	right = (getWidth() + mScaleBg.getWidth())/2;
+    	bottom = (getHeight() + mScaleBg.getHeight())/2;
+    	src = new Rect(0, 0, mScaleBg.getWidth(), mScaleBg.getHeight());
+    	dst = new Rect(left, top, right, bottom);
+    	canvas.drawBitmap(mScaleBg, null, dst, mPaint);
+    }
+    
+    private void drawHelp(Canvas canvas) {
+    	mPaint.setColor(Color.RED);
+    	mPaint.setStrokeWidth(2);
+    	for (int i : points) {
+    		int start = (getWidth() - mScaleBg.getWidth())/2 + i;
+    		canvas.drawLine(start, 0, start, getHeight(), mPaint);
+    	}
+    }
+    
+    private void drawThumb(Canvas canvas) {
+    	mThumb.draw(canvas);
+    }
+    
+    private void drawSwitchButton(Canvas canvas) {
+    	mSwitch.draw(canvas);
+    }
+    
+    class Thumb {
+    	private int mCenterX, mCenterY;
+    	
+    	private int mR;
+    	private int mPadding;
+    	private int mColor;
+    	
+    	private boolean isPressed = false;
+    	
+    	public Thumb(int r, int padding) {
+    		mR = r;
+    		mPadding = padding;
+    		double angle = mProgress/50*Math.PI;
+    		setAngle(angle);
+    	}
+    	
+    	public void setAngle(double angle) {
+    		int w = getWidth();
+    		int h = getHeight();
+    		int offsetX = 0, offsetY = 0;
+    		if (angle < Math.PI/2) {
+    			offsetX = (int)(-Math.sin(angle) * r2);
+    			offsetY = (int)(Math.cos(angle) * r2);
+    		} else if (angle < Math.PI) {
+    			offsetX = (int)(-Math.sin(Math.PI - angle) * r2);
+    			offsetY = (int)(-Math.cos(Math.PI - angle) * r2);
+    		} else if (angle < Math.PI * 1.5) {
+    			offsetX = (int)(Math.sin(angle - Math.PI) * r2);
+    			offsetY = (int)(-Math.cos(angle - Math.PI) * r2);
+    		} else {
+    			offsetX = (int)(Math.sin(2 * Math.PI - angle) * r2);
+    			offsetY = (int)(Math.cos(2 * Math.PI - angle) * r2);
+    		}
+			mCenterX = (int)(w/2 + offsetX);
+			mCenterY = (int)(h/2 + offsetY);
+			mColor = mScaleBg.getPixel(mScaleBg.getWidth()/2 + offsetX, mScaleBg.getHeight()/2 + offsetY);
+			invalidate();
+    	}
+    	
+    	public void draw(Canvas canvas) {//0xfff0eff5
+    		mPaint.setColor(isPressed?0xFFafb8c1:Color.WHITE);
+    		mPaint.setStyle(Paint.Style.FILL);
+    		canvas.drawCircle(mCenterX, mCenterY, mR, mPaint);
+    		mPaint.setColor(mColor);
+    		canvas.drawCircle(mCenterX, mCenterY, mR - mPadding, mPaint);
+    	}
+    	
+    	public boolean isPressed() {
+    		return isPressed;
+    	}
+    	
+    	public boolean isInTargetZone(float x, float y) {
+    		double _x = Math.abs(mCenterX - x);
+    		double _y = Math.abs(mCenterY - y);
+    		double distance = Math.sqrt(_x*_x+_y*_y);
+        	if (distance < mR) {
+                return true;
+            }
+            return false;
+    	}
+    	
+    	public void press() {
+    		isPressed = true;
+    		invalidate();
+    	}
+
+		public void release() {
+			isPressed = false;
+			invalidate();
+		}
+    }
+    
+    class SwitchButton {
+
+    	private int mCenterX, mCenterY;
+    	private Bitmap mBitmap;
+    	
+    	private int lightStatus; // 0:关  1:开
+    	private boolean isPressed;
+    	public SwitchButton(int x, int y) {
+    		mCenterX = x;
+    		mCenterY = y;
+    		isPressed = false;
+    		changeStatus(0);
+    	}
+    	
+    	public void draw(Canvas canvas) {
+    		int left = (getWidth() - mBitmap.getWidth())/2;
+    		int top = (getHeight() - mBitmap.getHeight())/2;
+    		int right = (getWidth() + mBitmap.getWidth())/2;
+    		int bottom = (getHeight() + mBitmap.getHeight())/2;
+    		Rect dst = new Rect(left, top, right, bottom);
+    		canvas.drawBitmap(mBitmap, null, dst, mPaint);
+    	}
+    	
+    	public void onSizeChange() {
+    		int w = getWidth();
+    		int h = getHeight();
+    		mCenterX = w/2;
+			mCenterY = h/2;
+    	}
+    	
+    	public void changeStatus(int status) {
+    		lightStatus = status;
+			mBitmap = mSwitchButton[lightStatus];
+			invalidate();
+    	}
+    	
+    	public void statusToggle() {
+    		if(lightStatus == 1)
+    			changeStatus(0);
+    		else
+    			changeStatus(1);
+    	}
+    	
+    	public boolean isInTargetZone(float x, float y) {
+    		double _x = Math.abs(mCenterX - x);
+    		double _y = Math.abs(mCenterY - y);
+    		double distance = Math.sqrt(_x*_x+_y*_y);
+        	if (distance < r1) {
+                return true;
+            }
+            return false;
+    	}
+    	
+    	public boolean isPressed() {
+    		return isPressed;
+    	}
+
+    	public void press() {
+    		isPressed = true;
+    		invalidate();
+    	}
+
+		public void release() {
+			isPressed = false;
+			invalidate();
+		}
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+
+        // If this View is not enabled, don't allow for touch interactions.
+        if (!isEnabled()) {
+            return false;
+        }
+
+        switch (event.getAction()) {
+
+            case MotionEvent.ACTION_DOWN:
+                boolean handler = onActionDown(event.getX(), event.getY());
+                Log.d("LightControlView", "onTouchEvent ACTION_DOWN:" + handler);
+                return handler;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                this.getParent().requestDisallowInterceptTouchEvent(false);
+                onActionUp(event.getX(), event.getY());
+                return true;
+
+            case MotionEvent.ACTION_MOVE:
+                onActionMove(event.getX(), event.getY());
+                this.getParent().requestDisallowInterceptTouchEvent(true);
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Handles a {@link MotionEvent#ACTION_DOWN} event.
+     * 
+     * @param x the x-coordinate of the down action
+     * @param y the y-coordinate of the down action
+     */
+    private boolean onActionDown(float x, float y) {
+    	
+		if (!mThumb.isPressed() && mThumb.isInTargetZone(x, y)) {
+			mThumb.press();
+
+			if (mListener != null) {
+				mListener.onBeginProgressChange(mProgress);
+			}
+			return true;
+		} else if (!mSwitch.isPressed() && mSwitch.isInTargetZone(x, y)) {
+			mSwitch.press();
+			return true;
+		} else if (isInTargetZone(x, y)) {
+			mThumb.press();
+
+			if (mListener != null) {
+				mListener.onBeginProgressChange(mProgress);
+			}
+			onActionMove(x, y);
+			return true;
+		}
+		return false;
+    }
+
+    /**
+     * Handles a {@link MotionEvent#ACTION_UP} or 
+     * {@link MotionEvent#ACTION_CANCEL} event.
+     * 
+     * @param x the x-coordinate of the up action
+     * @param y the y-coordinate of the up action
+     */
+    private void onActionUp(float x, float y) {
+
+		if (mThumb.isPressed()) {
+			mThumb.release();
+			if (mListener != null) {
+				mListener.onEndProgressChange(mProgress);
+			}
+		} else if (mSwitch.isPressed()) {
+			mSwitch.release();
+			mSwitch.statusToggle();
+			if (mListener != null) {
+				mListener.onSwitchClick(mSwitch.lightStatus);
+			}
+		}
+	}
+
+    /**
+     * Handles a {@link MotionEvent#ACTION_MOVE} event.
+     * 
+     * @param x the x-coordinate of the move event
+     */
+    private void onActionMove(float x, float y) {
+		if (mThumb.isPressed()) {
+			int w = getWidth();
+			int h = getHeight();
+			double sangle = Math.atan2((y - h/2), (x - w/2));
+			double angle = sangle + Math.PI + Math.PI/2;
+			if (angle > Math.PI*2) {
+				angle -= Math.PI*2;
+			}
+			mProgress = (int)(angle/Math.PI/2*100);
+			mThumb.setAngle(angle);
+			if (mListener != null) {
+				mListener.onProgressChange(mProgress);
+			}
+		} else if (mSwitch.isPressed()) {
+			if (mSwitch.isInTargetZone(x, y)) {
+				
+			} else {
+				mSwitch.release();
+			}
+		}
+    }
+    
+    public interface LightControlListener {
+    	public void onBeginProgressChange(int progress);
+    	public void onProgressChange(int progress);
+    	public void onEndProgressChange(int progress);
+    	public void onSwitchClick(int status);
+    }
+    
+    public void setControlListener(LightControlListener listener) {
+    	mListener = listener;
+    }
+    
+    public int getProgress() {
+    	return mProgress;
+    }
+    
+    public void setProgress(int progress) {
+    	this.mProgress = progress;
+    	double angle = mProgress*Math.PI/50;
+    	mThumb.setAngle(angle);
+    	invalidate();
+    }
+    
+    public void setSwitchStatus(int status) {
+    	mSwitch.changeStatus(status);
+    }
+    
+    public int getSwitchStatus() {
+    	return mSwitch.lightStatus;
+    }
+
+    private boolean isInTargetZone(float x, float y) {
+    	int w = getWidth();
+		int h = getHeight();
+		double _x = Math.abs(w/2 - x);
+		double _y = Math.abs(h/2 - y);
+		double distance = Math.sqrt(_x*_x+_y*_y);
+    	if (distance < r3) {
+            return true;
+        }
+        return false;
+    }
+}
